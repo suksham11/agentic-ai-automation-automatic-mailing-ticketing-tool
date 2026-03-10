@@ -11,7 +11,13 @@ API_PATH = "/v1/process-message"
 ANALYTICS_PATH = "/v1/ticket-analytics"
 HISTORY_PATH = "/v1/tickets/history"
 MAX_BATCH_ROWS = 50
-MAX_CSV_BYTES = 512 * 1024
+MAX_CSV_BYTES = 2 * 1024 * 1024
+MAX_BATCH_ROWS = 200
+
+TICKET_ID_ALIASES = ["ticket_id", "ticketid", "id", "record_id", "case_id", "order_id"]
+CUSTOMER_EMAIL_ALIASES = ["customer_email", "email", "customeremail", "user_email"]
+SUBJECT_ALIASES = ["subject", "title", "topic"]
+MESSAGE_ALIASES = ["message", "description", "details", "issue", "query", "comment", "comments", "note"]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -88,20 +94,36 @@ def check_api_health(api_base_url: str) -> tuple[bool, str]:
     return True, "ok"
 
 
-def parse_csv(file_bytes: bytes) -> list[dict[str, str]]:
+def _pick_value(row: dict[str, str], aliases: list[str]) -> str:
+    for key in aliases:
+        value = (row.get(key) or "").strip()
+        if value:
+            return value
+    return ""
+
+
+def parse_csv(file_bytes: bytes) -> tuple[list[dict[str, str]], list[str]]:
     text = file_bytes.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
+    raw_headers = reader.fieldnames or []
+    headers = [header.strip().lower() for header in raw_headers if header]
+
     rows = []
-    for row in reader:
+    for raw_row in reader:
+        row = {(k or "").strip().lower(): (v or "") for k, v in raw_row.items()}
         rows.append(
             {
-                "ticket_id": (row.get("ticket_id") or "").strip(),
-                "customer_email": (row.get("customer_email") or "").strip(),
-                "subject": (row.get("subject") or "").strip(),
-                "message": (row.get("message") or "").strip(),
+                "ticket_id": _pick_value(row, TICKET_ID_ALIASES),
+                "customer_email": _pick_value(row, CUSTOMER_EMAIL_ALIASES),
+                "subject": _pick_value(row, SUBJECT_ALIASES),
+                "message": _pick_value(row, MESSAGE_ALIASES),
             }
         )
-    return rows
+    return rows, headers
+
+
+def parse_csv_text(csv_text: str) -> tuple[list[dict[str, str]], list[str]]:
+    return parse_csv(csv_text.encode("utf-8"))
 
 
 def is_valid_row(row: dict[str, str]) -> bool:
@@ -224,7 +246,12 @@ def main() -> None:
 
     with tab_batch:
         st.caption("CSV columns: `ticket_id,customer_email,subject,message`")
+        st.info("If browser upload fails, paste CSV content below and process directly.")
+        pasted_csv = st.text_area("Paste CSV content (fallback)", height=140)
         uploaded = st.file_uploader("Upload CSV", type=["csv"])
+
+        rows: list[dict[str, str]] = []
+        headers: list[str] = []
 
         if uploaded is not None:
             raw_bytes = uploaded.getvalue()
@@ -234,8 +261,17 @@ def main() -> None:
                 )
                 st.stop()
 
-            rows = parse_csv(raw_bytes)
+            rows, headers = parse_csv(raw_bytes)
+        elif pasted_csv.strip():
+            rows, headers = parse_csv_text(pasted_csv)
+
+        if rows:
             valid_rows = [row for row in rows if is_valid_row(row)]
+            if rows and not valid_rows:
+                st.error(
+                    "No valid rows found. Include columns for ticket ID and message. "
+                    f"Detected columns: {', '.join(headers) if headers else 'none'}"
+                )
             if len(valid_rows) > MAX_BATCH_ROWS:
                 st.warning(
                     f"Limiting processing to first {MAX_BATCH_ROWS} valid rows (found {len(valid_rows)})."
