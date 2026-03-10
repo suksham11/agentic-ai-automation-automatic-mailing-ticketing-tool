@@ -11,7 +11,17 @@ from app.services.persistence import Base
 
 config = context.config
 settings = get_settings()
-config.set_main_option("sqlalchemy.url", settings.postgres_dsn)
+
+
+def _normalize_postgres_dsn(dsn: str) -> str:
+    if dsn.startswith("postgres://"):
+        return dsn.replace("postgres://", "postgresql+psycopg://", 1)
+    if dsn.startswith("postgresql://") and "+" not in dsn.split("://", 1)[0]:
+        return dsn.replace("postgresql://", "postgresql+psycopg://", 1)
+    return dsn
+
+
+config.set_main_option("sqlalchemy.url", _normalize_postgres_dsn(settings.postgres_dsn))
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
