@@ -156,7 +156,8 @@ def main() -> None:
         unsafe_allow_html=True,
     )
 
-    default_api_base_url = os.getenv("STREAMLIT_API_BASE_URL", "http://127.0.0.1:8000")
+    secret_api_base_url = st.secrets.get("STREAMLIT_API_BASE_URL", "") if hasattr(st, "secrets") else ""
+    default_api_base_url = secret_api_base_url or os.getenv("STREAMLIT_API_BASE_URL", "http://127.0.0.1:8000")
     api_base_url = st.text_input("FastAPI Base URL", value=default_api_base_url)
     healthy, health_message = check_api_health(api_base_url)
     if healthy:
