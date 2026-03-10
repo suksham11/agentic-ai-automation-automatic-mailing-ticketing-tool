@@ -89,10 +89,38 @@ alembic upgrade head
 
 ## Engineering Quality
 
-- Test suite: `24 passed`.
+- Test suite: `30 passed`.
 - CI pipeline: GitHub Actions workflow at `.github/workflows/ci.yml` runs `pytest -q` on push and PR.
 - Runtime startup: FastAPI lifespan startup is used (no deprecated startup event hook).
 - Container hardening: non-root user and container health checks are enabled.
+
+## Deployment
+
+### Backend (Render)
+
+1. In Render, click `New` -> `Blueprint`.
+2. Select this GitHub repo and keep `render.yaml` enabled.
+3. Set required secret env vars in Render dashboard:
+  - `OPENAI_API_KEY`
+  - `ZENDESK_BASE_URL`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN`
+  - `GMAIL_SENDER_EMAIL`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`
+4. Deploy and copy backend URL, then verify health:
+
+```bash
+curl https://<your-render-backend>/v1/health
+```
+
+### Frontend (Streamlit Community Cloud)
+
+1. In Streamlit Cloud, create app from this repo.
+2. Set file path to `frontend/streamlit_app.py`.
+3. Add app secret in Streamlit settings:
+
+```toml
+STREAMLIT_API_BASE_URL = "https://<your-render-backend>"
+```
+
+4. Deploy and open the app URL.
 
 ## Production Checklist
 

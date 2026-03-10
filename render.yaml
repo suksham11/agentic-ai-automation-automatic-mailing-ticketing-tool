@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: agentic-ai-support-backend
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /v1/health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: EMAIL_DELIVERY_MODE
+        value: safe
+      - key: POSTGRES_DSN
+        fromDatabase:
+          name: agentic-ai-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: agentic-ai-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ZENDESK_BASE_URL
+        sync: false
+      - key: ZENDESK_EMAIL
+        sync: false
+      - key: ZENDESK_API_TOKEN
+        sync: false
+      - key: GMAIL_SENDER_EMAIL
+        sync: false
+      - key: GMAIL_CLIENT_ID
+        sync: false
+      - key: GMAIL_CLIENT_SECRET
+        sync: false
+      - key: GMAIL_REFRESH_TOKEN
+        sync: false
+
+  - type: redis
+    name: agentic-ai-redis
+    plan: free
+    ipAllowList: []
+
+databases:
+  - name: agentic-ai-postgres
+    databaseName: support_agent
+    user: support_agent
+    plan: free
