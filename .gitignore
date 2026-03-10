@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Environments
+.env
+.env.*
+!.env.example
+
+# Streamlit local secrets/config
+.streamlit/secrets.toml
+
+# OAuth credentials / secrets
+client_secret_*.json
+oauth_client*.json
+credentials*.json
+token*.json
+
+# Data artifacts
+data/raw/*.jsonl
+data/eval/*.jsonl
+data/kb/*.md
+!data/kb/.gitkeep
+scripts/data/raw/*.jsonl
+scripts/data/eval/*.jsonl
+scripts/data/kb/*.md
+
+# Editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build/test artifacts
+*.log
+.coverage
+htmlcov/
