@@ -17,7 +17,18 @@ MAX_BATCH_ROWS = 200
 TICKET_ID_ALIASES = ["ticket_id", "ticketid", "id", "record_id", "case_id", "order_id"]
 CUSTOMER_EMAIL_ALIASES = ["customer_email", "email", "customeremail", "user_email"]
 SUBJECT_ALIASES = ["subject", "title", "topic"]
-MESSAGE_ALIASES = ["message", "description", "details", "issue", "query", "comment", "comments", "note"]
+MESSAGE_ALIASES = [
+    "message",
+    "description",
+    "details",
+    "issue",
+    "query",
+    "comment",
+    "comments",
+    "note",
+    "item_type",
+    "sales_channel",
+]
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
@@ -102,21 +113,50 @@ def _pick_value(row: dict[str, str], aliases: list[str]) -> str:
     return ""
 
 
+def _normalize_header(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
+
+
+def _build_fallback_message(row: dict[str, str]) -> str:
+    # If no dedicated message column exists, summarize key fields into one message.
+    preferred_keys = [
+        "region",
+        "country",
+        "item_type",
+        "sales_channel",
+        "order_priority",
+        "units_sold",
+        "total_revenue",
+        "total_cost",
+        "total_profit",
+    ]
+    parts: list[str] = []
+    for key in preferred_keys:
+        value = (row.get(key) or "").strip()
+        if value:
+            parts.append(f"{key.replace('_', ' ').title()}: {value}")
+    return " | ".join(parts)
+
+
 def parse_csv(file_bytes: bytes) -> tuple[list[dict[str, str]], list[str]]:
     text = file_bytes.decode("utf-8-sig")
     reader = csv.DictReader(io.StringIO(text))
     raw_headers = reader.fieldnames or []
-    headers = [header.strip().lower() for header in raw_headers if header]
+    headers = [_normalize_header(header) for header in raw_headers if header]
 
     rows = []
     for raw_row in reader:
-        row = {(k or "").strip().lower(): (v or "") for k, v in raw_row.items()}
+        row = {_normalize_header(k or ""): (v or "") for k, v in raw_row.items()}
+        message = _pick_value(row, MESSAGE_ALIASES)
+        if not message:
+            message = _build_fallback_message(row)
+
         rows.append(
             {
                 "ticket_id": _pick_value(row, TICKET_ID_ALIASES),
                 "customer_email": _pick_value(row, CUSTOMER_EMAIL_ALIASES),
                 "subject": _pick_value(row, SUBJECT_ALIASES),
-                "message": _pick_value(row, MESSAGE_ALIASES),
+                "message": message,
             }
         )
     return rows, headers
