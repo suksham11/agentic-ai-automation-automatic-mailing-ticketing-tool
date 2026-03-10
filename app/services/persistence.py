@@ -16,8 +16,17 @@ _engine = None
 _SessionLocal = None
 
 
+def _normalize_postgres_dsn(dsn: str) -> str:
+    if dsn.startswith("postgres://"):
+        return dsn.replace("postgres://", "postgresql+psycopg://", 1)
+    if dsn.startswith("postgresql://") and "+" not in dsn.split("://", 1)[0]:
+        return dsn.replace("postgresql://", "postgresql+psycopg://", 1)
+    return dsn
+
+
 def _build_engine(settings: Settings):
-    return create_engine(settings.postgres_dsn, pool_pre_ping=True, future=True)
+    dsn = _normalize_postgres_dsn(settings.postgres_dsn)
+    return create_engine(dsn, pool_pre_ping=True, future=True)
 
 
 def init_database(settings: Settings) -> bool:
