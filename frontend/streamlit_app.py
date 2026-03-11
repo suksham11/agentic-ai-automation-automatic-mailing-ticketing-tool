@@ -184,20 +184,70 @@ def main() -> None:
         <style>
         @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
 
-        html, body, [class*="css"] {
+        /* ── Base: force light-mode look everywhere ── */
+        html, body, [class*="css"],
+        .stApp, .stApp * {
             font-family: 'Space Grotesk', sans-serif;
-            color: #1a1a2e !important;
+            color-scheme: light !important;
         }
         .stApp {
-            background: radial-gradient(circle at 8% 5%, #fff4d6 0%, #f6f9ff 40%, #e8f3ff 100%);
+            background: radial-gradient(circle at 8% 5%, #fff4d6 0%, #f6f9ff 40%, #e8f3ff 100%) !important;
         }
-        h1, h2, h3 {
+
+        /* ── Text colours ── */
+        html, body, [class*="css"],
+        p, span, label, li, td, th, div, small, caption {
+            color: #1a1a2e !important;
+        }
+        h1, h2, h3, h4, h5, h6 {
             letter-spacing: -0.02em;
             color: #1a1a2e !important;
         }
         code, .stCodeBlock {
             font-family: 'IBM Plex Mono', monospace;
         }
+
+        /* ── Input fields: light background + dark text ── */
+        input, textarea, select,
+        .stTextInput input,
+        .stTextArea textarea,
+        .stSelectbox select,
+        [data-baseweb="input"] input,
+        [data-baseweb="textarea"] textarea,
+        [data-baseweb="select"] div {
+            background-color: #ffffff !important;
+            color: #1a1a2e !important;
+            border: 1px solid #c0c8d4 !important;
+        }
+        [data-baseweb="input"],
+        [data-baseweb="textarea"],
+        [data-baseweb="base-input"] {
+            background-color: #ffffff !important;
+        }
+
+        /* ── Tabs: all tab labels visible ── */
+        .stTabs [data-baseweb="tab-list"] button {
+            color: #3a3f54 !important;
+        }
+        .stTabs [data-baseweb="tab-list"] button[aria-selected="true"] {
+            color: #d6336c !important;
+            border-bottom-color: #d6336c !important;
+        }
+
+        /* ── Checkbox label ── */
+        .stCheckbox label span,
+        .stCheckbox label p {
+            color: #1a1a2e !important;
+        }
+
+        /* ── Buttons ── */
+        .stButton > button {
+            background-color: #1a1a2e !important;
+            color: #ffffff !important;
+            border: none !important;
+        }
+
+        /* ── Hero banner ── */
         .hero {
             background: linear-gradient(120deg, #11253f, #1b5d9b);
             color: #ffffff !important;
@@ -208,19 +258,42 @@ def main() -> None:
         .hero h2, .hero p {
             color: #ffffff !important;
         }
-        /* Hide Streamlit chrome that can show account/token/fork controls. */
+
+        /* ── Alerts (success/error/info/warning) ── */
+        .stAlert p, .stAlert span, .stAlert a {
+            color: inherit !important;
+        }
+
+        /* ── Hide ALL Streamlit Cloud chrome ── */
         #MainMenu,
+        header,
         header[data-testid="stHeader"],
         div[data-testid="stToolbar"],
         div[data-testid="stDecoration"],
         div[data-testid="stStatusWidget"],
-        div[data-testid="stHeaderActionElements"] {
+        div[data-testid="stHeaderActionElements"],
+        .stDeployButton,
+        ._profileContainer_gzau3_53,
+        [data-testid="manage-app-button"],
+        #stStreamlitDialog {
             display: none !important;
             visibility: hidden !important;
             height: 0 !important;
+            width: 0 !important;
+            overflow: hidden !important;
+            position: absolute !important;
+            top: -9999px !important;
         }
-        /* Hide Streamlit footer branding. */
+        /* Hide footer branding */
         footer {
+            display: none !important;
+        }
+        /* Hide bottom-right floating icons (Streamlit Community watermark) */
+        iframe[title="Streamlit Community"],
+        ._container_gzau3_1,
+        div[class*="StatusWidget"],
+        .viewerBadge_container,
+        .viewerBadge_link {
             display: none !important;
         }
         </style>
