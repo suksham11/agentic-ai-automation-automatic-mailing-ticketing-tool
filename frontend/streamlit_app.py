@@ -186,22 +186,42 @@ def main() -> None:
 
         html, body, [class*="css"] {
             font-family: 'Space Grotesk', sans-serif;
+            color: #1a1a2e !important;
         }
         .stApp {
             background: radial-gradient(circle at 8% 5%, #fff4d6 0%, #f6f9ff 40%, #e8f3ff 100%);
         }
         h1, h2, h3 {
             letter-spacing: -0.02em;
+            color: #1a1a2e !important;
         }
         code, .stCodeBlock {
             font-family: 'IBM Plex Mono', monospace;
         }
         .hero {
             background: linear-gradient(120deg, #11253f, #1b5d9b);
-            color: #ffffff;
+            color: #ffffff !important;
             padding: 1rem 1.2rem;
             border-radius: 14px;
             margin-bottom: 1rem;
+        }
+        .hero h2, .hero p {
+            color: #ffffff !important;
+        }
+        /* Hide Streamlit chrome that can show account/token/fork controls. */
+        #MainMenu,
+        header[data-testid="stHeader"],
+        div[data-testid="stToolbar"],
+        div[data-testid="stDecoration"],
+        div[data-testid="stStatusWidget"],
+        div[data-testid="stHeaderActionElements"] {
+            display: none !important;
+            visibility: hidden !important;
+            height: 0 !important;
+        }
+        /* Hide Streamlit footer branding. */
+        footer {
+            display: none !important;
         }
         </style>
         """,
