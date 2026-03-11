@@ -194,9 +194,22 @@ def main() -> None:
             background: radial-gradient(circle at 8% 5%, #fff4d6 0%, #f6f9ff 40%, #e8f3ff 100%) !important;
         }
 
-        /* ── Text colours ── */
-        html, body, [class*="css"],
-        p, span, label, li, td, th, div, small, caption {
+        /* ── Text colours (only on the main content layer, not inside widgets) ── */
+        .stApp > div,
+        .stApp label,
+        .stApp p,
+        .stApp li,
+        .stApp small,
+        .stApp caption,
+        .stMarkdown,
+        .stMarkdown p,
+        .stMarkdown span,
+        .stCaption,
+        [data-testid="stMetricLabel"],
+        [data-testid="stMetricValue"],
+        [data-testid="stMetricDelta"],
+        .stSlider label,
+        .stRadio label {
             color: #1a1a2e !important;
         }
         h1, h2, h3, h4, h5, h6 {
@@ -240,11 +253,54 @@ def main() -> None:
             color: #1a1a2e !important;
         }
 
-        /* ── Buttons ── */
-        .stButton > button {
-            background-color: #1a1a2e !important;
+        /* ── Buttons: white text on dark bg ── */
+        .stButton > button,
+        .stButton > button span,
+        .stButton > button p,
+        .stButton > button div,
+        .stFormSubmitButton > button,
+        .stFormSubmitButton > button span,
+        .stFormSubmitButton > button p,
+        .stFormSubmitButton > button div,
+        .stDownloadButton > button,
+        .stDownloadButton > button span {
+            background-color: #1b5d9b !important;
             color: #ffffff !important;
             border: none !important;
+        }
+        .stButton > button:hover,
+        .stFormSubmitButton > button:hover,
+        .stDownloadButton > button:hover {
+            background-color: #11253f !important;
+        }
+
+        /* ── File uploader: light background + visible text ── */
+        [data-testid="stFileUploader"],
+        [data-testid="stFileUploadDropzone"],
+        [data-testid="stFileUploadDropzone"] div,
+        [data-testid="stFileUploadDropzone"] span,
+        [data-testid="stFileUploadDropzone"] small,
+        [data-testid="stFileUploadDropzone"] p,
+        .stFileUploader section {
+            background-color: #f0f4fa !important;
+            color: #1a1a2e !important;
+        }
+        [data-testid="stFileUploadDropzone"] button,
+        [data-testid="stFileUploadDropzone"] button span {
+            background-color: #ffffff !important;
+            color: #1a1a2e !important;
+            border: 1px solid #c0c8d4 !important;
+        }
+
+        /* ── Dataframe / table: light rows ── */
+        [data-testid="stDataFrame"],
+        [data-testid="stTable"],
+        .stDataFrame table,
+        .stDataFrame th,
+        .stDataFrame td,
+        [data-testid="stDataFrame"] div {
+            background-color: #ffffff !important;
+            color: #1a1a2e !important;
         }
 
         /* ── Hero banner ── */
