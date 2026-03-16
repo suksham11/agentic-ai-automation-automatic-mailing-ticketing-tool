@@ -1,9 +1,28 @@
 import base64
+import logging
 from email.message import EmailMessage
 
 import httpx
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
 
 from app.core.config import Settings
+
+logger = logging.getLogger(__name__)
+
+# Retry policy: up to 3 attempts on transient network/timeout failures.
+_RETRY_TRANSPORT = dict(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=4.0),
+    retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
 
 
 class EmailAdapter:
@@ -113,24 +132,26 @@ class EmailAdapter:
         raw_message = self._build_raw_message(to_email=to_email, subject=subject, body=body)
 
         try:
-            with httpx.Client(timeout=20.0) as client:
-                access_token, token_error = self._get_access_token(client)
-                if not access_token:
-                    return {
-                        "sent": False,
-                        "to": to_email,
-                        "subject": subject,
-                        "reason": token_error or "gmail_access_token_unavailable",
-                    }
+            for attempt in Retrying(**_RETRY_TRANSPORT):
+                with attempt:
+                    with httpx.Client(timeout=20.0) as client:
+                        access_token, token_error = self._get_access_token(client)
+                        if not access_token:
+                            return {
+                                "sent": False,
+                                "to": to_email,
+                                "subject": subject,
+                                "reason": token_error or "gmail_access_token_unavailable",
+                            }
 
-                response = client.post(
-                    "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
-                    json={"raw": raw_message},
-                    headers={
-                        "Authorization": f"Bearer {access_token}",
-                        "Content-Type": "application/json",
-                    },
-                )
+                        response = client.post(
+                            "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+                            json={"raw": raw_message},
+                            headers={
+                                "Authorization": f"Bearer {access_token}",
+                                "Content-Type": "application/json",
+                            },
+                        )
         except Exception as exc:
             return {
                 "sent": False,

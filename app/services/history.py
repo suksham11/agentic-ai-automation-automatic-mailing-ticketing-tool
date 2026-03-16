@@ -1,8 +1,11 @@
+import logging
 from collections import Counter
 
 from app.models.schemas import TicketAnalyticsResponse, TicketHistoryItem, TicketHistoryResponse, IntentCount
 from app.models.ticket_event import TicketEvent
 from app.services.persistence import from_json_list, get_session, to_json_list
+
+logger = logging.getLogger(__name__)
 
 
 def save_ticket_event(
@@ -38,6 +41,7 @@ def save_ticket_event(
             session.commit()
         return True
     except Exception:
+        logger.exception("Failed to save ticket event for ticket_id=%s", ticket_id)
         return False
 
 
@@ -68,6 +72,7 @@ def list_ticket_history(limit: int = 50) -> TicketHistoryResponse:
                 )
             )
     except Exception:
+        logger.exception("Failed to list ticket history")
         return TicketHistoryResponse(items=[])
 
     return TicketHistoryResponse(items=items)
@@ -78,11 +83,13 @@ def load_ticket_analytics_from_db() -> TicketAnalyticsResponse:
         with get_session() as session:
             rows = session.query(TicketEvent).all()
     except Exception:
+        logger.exception("Failed to load ticket analytics from database")
         return TicketAnalyticsResponse(
             total_tickets=0,
             processed_ok=0,
             processed_with_warnings=0,
             handoff_required=0,
+            handoff_rate=0.0,
             average_confidence=0.0,
             intent_breakdown=[],
             top_warnings=[],
@@ -94,6 +101,7 @@ def load_ticket_analytics_from_db() -> TicketAnalyticsResponse:
             processed_ok=0,
             processed_with_warnings=0,
             handoff_required=0,
+            handoff_rate=0.0,
             average_confidence=0.0,
             intent_breakdown=[],
             top_warnings=[],
@@ -116,6 +124,7 @@ def load_ticket_analytics_from_db() -> TicketAnalyticsResponse:
         processed_ok=processed_ok,
         processed_with_warnings=processed_warn,
         handoff_required=handoff_required,
+        handoff_rate=round(handoff_required / total, 3),
         average_confidence=avg_conf,
         intent_breakdown=[IntentCount(intent=i, count=c) for i, c in intent_counts.most_common()],
         top_warnings=[k for k, _ in warning_counts.most_common(5)],

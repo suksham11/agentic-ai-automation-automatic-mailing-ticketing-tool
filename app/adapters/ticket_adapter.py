@@ -1,12 +1,30 @@
 import base64
+import logging
 import re
 
 import httpx
+from tenacity import (
+    Retrying,
+    retry_if_exception_type,
+    stop_after_attempt,
+    wait_exponential,
+    before_sleep_log,
+)
 
 from app.core.config import Settings
 
+logger = logging.getLogger(__name__)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Retry policy: up to 3 attempts on transient network/timeout failures.
+_RETRY_TRANSPORT = dict(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=0.5, min=0.5, max=4.0),
+    retry=retry_if_exception_type((httpx.TransportError, httpx.TimeoutException)),
+    before_sleep=before_sleep_log(logger, logging.WARNING),
+    reraise=True,
+)
 
 
 class TicketAdapter:
@@ -41,19 +59,22 @@ class TicketAdapter:
         ]
 
         for query in queries:
-            response = client.get(
-                f"{base_url}/api/v2/search.json",
-                params={"query": query},
-                headers=headers,
-            )
-            if response.status_code >= 400:
-                continue
+            try:
+                response = client.get(
+                    f"{base_url}/api/v2/search.json",
+                    params={"query": query},
+                    headers=headers,
+                )
+                if response.status_code >= 400:
+                    continue
 
-            payload = response.json()
-            for result in payload.get("results", []):
-                ticket_id = result.get("id")
-                if ticket_id is not None:
-                    return str(ticket_id)
+                payload = response.json()
+                for result in payload.get("results", []):
+                    ticket_id = result.get("id")
+                    if ticket_id is not None:
+                        return str(ticket_id)
+            except (httpx.HTTPError, ValueError):
+                continue
 
         return None
 
@@ -82,10 +103,21 @@ class TicketAdapter:
                 "external_id": external_ticket_id,
             }
         }
+        has_requester = False
         if requester_email and _EMAIL_RE.match(requester_email.strip()):
-            payload["ticket"]["requester"] = {"email": requester_email.strip()}
+            email = requester_email.strip()
+            name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+            payload["ticket"]["requester"] = {"email": email, "name": name}
+            has_requester = True
 
         response = client.post(url, json=payload, headers=headers)
+
+        # If Zendesk rejected the requester (422), retry without it so the
+        # ticket is created under the authenticated agent instead.
+        if response.status_code == 422 and has_requester:
+            payload["ticket"].pop("requester", None)
+            response = client.post(url, json=payload, headers=headers)
+
         if response.status_code >= 400:
             return {
                 "updated": False,
@@ -129,27 +161,39 @@ class TicketAdapter:
         }
 
         try:
-            with httpx.Client(timeout=20.0) as client:
-                resolved_ticket_id = ticket_id
-                if not resolved_ticket_id.isdigit():
-                    resolved_ticket_id = self._search_ticket_id(client, ticket_id)
-                    if not resolved_ticket_id:
-                        fallback_subject = subject or f"Support request {ticket_id}"
-                        return self._create_ticket(
-                            client=client,
-                            external_ticket_id=ticket_id,
-                            subject=fallback_subject,
-                            body=body,
-                            requester_email=requester_email,
-                        )
+            for attempt in Retrying(**_RETRY_TRANSPORT):
+                with attempt:
+                    with httpx.Client(timeout=20.0) as client:
+                        resolved_ticket_id = ticket_id
+                        if not resolved_ticket_id.isdigit():
+                            resolved_ticket_id = self._search_ticket_id(client, ticket_id)
+                            if not resolved_ticket_id:
+                                fallback_subject = subject or f"Support request {ticket_id}"
+                                return self._create_ticket(
+                                    client=client,
+                                    external_ticket_id=ticket_id,
+                                    subject=fallback_subject,
+                                    body=body,
+                                    requester_email=requester_email,
+                                )
 
-                base_url = self.settings.zendesk_base_url.rstrip("/")
-                url = f"{base_url}/api/v2/tickets/{resolved_ticket_id}.json"
-                headers = {
-                    "Authorization": self._auth_header(),
-                    "Content-Type": "application/json",
-                }
-                response = client.put(url, json=payload, headers=headers)
+                        base_url = self.settings.zendesk_base_url.rstrip("/")
+                        url = f"{base_url}/api/v2/tickets/{resolved_ticket_id}.json"
+                        headers = {
+                            "Authorization": self._auth_header(),
+                            "Content-Type": "application/json",
+                        }
+                        response = client.put(url, json=payload, headers=headers)
+
+                        if response.status_code == 404:
+                            fallback_subject = subject or f"Support request {ticket_id}"
+                            return self._create_ticket(
+                                client=client,
+                                external_ticket_id=ticket_id,
+                                subject=fallback_subject,
+                                body=body,
+                                requester_email=requester_email,
+                            )
         except Exception as exc:
             return {
                 "updated": False,

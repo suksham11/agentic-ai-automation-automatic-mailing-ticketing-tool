@@ -4,14 +4,30 @@ services:
     runtime: python
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /v1/health
     autoDeploy: true
     envVars:
       - key: APP_ENV
         value: production
+      - key: LOG_LEVEL
+        value: INFO
       - key: EMAIL_DELIVERY_MODE
         value: safe
+      - key: API_AUTH_ENABLED
+        value: true
+      - key: API_KEY
+        sync: false
+      - key: API_KEY_HEADER
+        value: X-API-Key
+      - key: RATE_LIMIT_ENABLED
+        value: true
+      - key: RATE_LIMIT_REQUESTS
+        value: 60
+      - key: RATE_LIMIT_WINDOW_SECONDS
+        value: 60
+      - key: CORS_ORIGINS
+        sync: false
       - key: POSTGRES_DSN
         fromDatabase:
           name: agentic-ai-postgres

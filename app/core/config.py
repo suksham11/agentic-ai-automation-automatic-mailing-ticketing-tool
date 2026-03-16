@@ -34,6 +34,9 @@ class Settings(BaseSettings):
     email_delivery_mode: str = "safe"
     email_allowed_recipients: str = ""
 
+    cors_origins: str = "*"  # comma-separated origins, or "*" to allow all
+    request_timeout_seconds: int = 30
+
     postgres_dsn: str = "postgresql+psycopg://postgres:postgres@localhost:5432/support_agent"
     redis_url: str = "redis://localhost:6379/0"
     kb_dir: str = "./data/kb"

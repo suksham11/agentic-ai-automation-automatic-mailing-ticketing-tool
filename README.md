@@ -101,13 +101,33 @@ alembic upgrade head
 1. In Render, click `New` -> `Blueprint`.
 2. Select this GitHub repo and keep `render.yaml` enabled.
 3. Set required secret env vars in Render dashboard:
-  - `OPENAI_API_KEY`
-  - `ZENDESK_BASE_URL`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN`
-  - `GMAIL_SENDER_EMAIL`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`
-4. Deploy and copy backend URL, then verify health:
+
+- `OPENAI_API_KEY`
+- `API_KEY`
+- `CORS_ORIGINS`
+- `ZENDESK_BASE_URL`, `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN`
+- `GMAIL_SENDER_EMAIL`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`
+
+4. Deploy. The service will run `alembic upgrade head` on startup before launching FastAPI.
+
+5. Copy the backend URL, then verify health:
 
 ```bash
 curl https://<your-render-backend>/v1/health
+```
+
+6. Verify authenticated API access with your API key:
+
+```bash
+curl -X POST https://<your-render-backend>/v1/process-message \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: <your-api-key>" \
+  -d '{
+    "ticket_id": "TCK-1001",
+    "customer_email": "user@example.com",
+    "subject": "Refund question",
+    "message": "I want a refund for my delayed order"
+  }'
 ```
 
 ### Frontend (Streamlit Community Cloud)

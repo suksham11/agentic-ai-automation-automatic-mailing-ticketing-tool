@@ -22,6 +22,7 @@ class ProcessMessageResponse(BaseModel):
     ticket_id: str
     decision: AgentDecision
     warnings: list[str] = Field(default_factory=list)
+    request_id: str | None = Field(default=None, description="Unique ID for this request, mirrors X-Request-Id header")
 
 
 class IntentCount(BaseModel):
@@ -34,6 +35,7 @@ class TicketAnalyticsResponse(BaseModel):
     processed_ok: int
     processed_with_warnings: int
     handoff_required: int
+    handoff_rate: float = Field(description="Fraction of tickets that required human handoff (0.0–1.0)")
     average_confidence: float
     intent_breakdown: list[IntentCount] = Field(default_factory=list)
     top_warnings: list[str] = Field(default_factory=list)
@@ -55,3 +57,11 @@ class TicketHistoryItem(BaseModel):
 
 class TicketHistoryResponse(BaseModel):
     items: list[TicketHistoryItem] = Field(default_factory=list)
+
+
+class HealthResponse(BaseModel):
+    status: str = Field(description="'ok' when all systems are healthy, 'degraded' when one or more checks fail")
+    uptime_seconds: float
+    database: bool = Field(description="True if a live database connection was verified")
+    ai_service: bool = Field(description="True if the AI provider is reachable / configured")
+    version: str = Field(default="1.0.0")
